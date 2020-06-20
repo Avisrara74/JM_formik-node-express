@@ -1,0 +1,41 @@
+.form {
+  max-width: 768px;
+  flex-basis: 100%;
+  padding: 0px 20px;
+  margin: 40px auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-item {
+  margin: 10px 0;
+  padding: 0px 20px;
+  width: 90%;
+}
+
+.form-item .add-skill {
+  margin-top: 10px;
+}
+
+.error {
+  color: red;
+}
+
+.skill-list-wrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.skill-list-wrapper-item {
+  font-size: 20px;
+  color: darkcyan;
+}
+
+.skill-list-wrapper-remove {
+  font-size: 20px;
+  color: brown;
+  background: transparent;
+  border: none;
+}
