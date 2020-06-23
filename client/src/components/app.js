@@ -1,4 +1,5 @@
-import React from 'react';
+/* eslint react/prop-types: 0 */
+import React, { useState } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { uniqueId } from 'lodash';
@@ -6,9 +7,21 @@ import {
   Input, InputNumber, Checkbox, Button,
 } from 'antd';
 import { UserOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
-import { createNewUser } from '../serverAPI/index';
+import { createNewUser } from '../API';
 import 'antd/dist/antd.css';
 import './app.css';
+
+const initialValues = {
+  name: '',
+  password: '',
+  repeatPassword: '',
+  email: '',
+  website: '',
+  age: 0,
+  currentSkill: '',
+  skills: [],
+  acceptTerms: false,
+};
 
 const registrationSchema = Yup.object().shape({
   name: Yup.string()
@@ -17,7 +30,7 @@ const registrationSchema = Yup.object().shape({
   password: Yup.string()
     .min(8, 'Слишком короткий')
     .max(50, 'Слишком длинный')
-    .matches(/[a-zA-Z]/, 'Пароль может содержать только латинские символы')
+    .matches(/^[A-Za-z0-9]+$/, 'Пароль может содержать только латинские символы и цифры')
     .matches(/(?=.*[0-9])/, 'Пароль должен содержать хотя бы одну цифру')
     .matches(/(?=.*[A-Z])/, 'Пароль должен содержать хотя бы одну заглавную букву')
     .required('Заполните поле'),
@@ -37,6 +50,8 @@ const registrationSchema = Yup.object().shape({
 });
 
 const App = () => {
+  const [isFormDisabled, setFormDisabled] = useState(false);
+
   const handleOnChangeAge = (value, setFieldValue) => {
     setFieldValue('age', value);
   };
@@ -49,7 +64,12 @@ const App = () => {
       return false;
     }
 
-    const newSkillsList = [...currentSkillsList, currentSkillValue];
+    const newSkill = {
+      title: currentSkillValue,
+      id: uniqueId(),
+    };
+
+    const newSkillsList = [...currentSkillsList, newSkill];
     setFieldValue('skills', newSkillsList);
     setFieldValue('currentSkill', '');
     return true;
@@ -62,12 +82,14 @@ const App = () => {
 
   const renderSkillsList = (skills, setFieldValue) => {
     if (skills.length === 0) return null;
+
     return (
       skills.map((skill) => {
         const skillIndex = skills.indexOf(skill);
+        const { id, title } = skill;
         return (
-          <div key={uniqueId()} className="skill-list-wrapper">
-            <div className="skill-list-wrapper-item">{skill}</div>
+          <div key={id} className="skill-list-wrapper">
+            <div className="skill-list-wrapper-item">{title}</div>
             <button
               type="button"
               className="skill-list-wrapper-remove"
@@ -81,33 +103,44 @@ const App = () => {
     );
   };
 
-  const handleOnSubmit = async (values, { setSubmitting, setFieldError, resetForm }) => {
+  const handleOnSubmit = async (values, props) => {
+    const { setSubmitting, setFieldError, resetForm } = props;
     try {
+      setFormDisabled(true);
       const response = await createNewUser(values);
-      if (response.status === 200) {
-        resetForm();
-        alert('Вы успешно зарегистрированны'); // eslint-disable-line no-alert
+      switch (response.status) {
+        case 200: {
+          setFormDisabled(false);
+          resetForm();
+          alert('Вы успешно зарегистрированны'); // eslint-disable-line no-alert
+          break;
+        }
+        case 500: {
+          setFormDisabled(false);
+          alert('Произошла ошибка на сервере, попробуйте позже'); // eslint-disable-line no-alert
+          break;
+        }
+        default: {
+          setFormDisabled(false);
+          alert('Неизвестная ошибка'); // eslint-disable-line no-alert
+        }
       }
     } catch (err) {
+      if (err.message === 'Network Error') {
+        alert('Ошибка соединения'); // eslint-disable-line no-alert
+        setFormDisabled(false);
+        return;
+      }
       const { field, message } = err.response.data;
       setFieldError(field, message);
       setSubmitting(false);
+      setFormDisabled(false);
     }
   };
 
   return (
     <Formik
-      initialValues={{
-        name: '',
-        password: '',
-        repeatPassword: '',
-        email: '',
-        website: '',
-        age: 0,
-        currentSkill: '',
-        skills: [],
-        acceptTerms: false,
-      }}
+      initialValues={initialValues}
       validationSchema={registrationSchema}
       onSubmit={handleOnSubmit}
     >
@@ -124,6 +157,7 @@ const App = () => {
               value={values.name}
               placeholder="Введите ваше имя"
               prefix={<UserOutlined className="site-form-item-icon" />}
+              disabled={isFormDisabled}
             />
             {errors.name && touched.name ? (
               <div className="error">{errors.name}</div>
@@ -139,6 +173,7 @@ const App = () => {
               value={values.password}
               placeholder="Введите пароль"
               iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+              disabled={isFormDisabled}
             />
             {errors.password && touched.password ? (
               <div className="error">{errors.password}</div>
@@ -154,6 +189,7 @@ const App = () => {
               value={values.repeatPassword}
               placeholder="Повторите пароль"
               iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+              disabled={isFormDisabled}
             />
             {errors.repeatPassword && touched.repeatPassword ? (
               <div className="error">{errors.repeatPassword}</div>
@@ -168,6 +204,7 @@ const App = () => {
               onChange={handleChange}
               value={values.email}
               placeholder="Введите ваш Email"
+              disabled={isFormDisabled}
             />
             {errors.email && touched.email ? (
               <div className="error">{errors.email}</div>
@@ -182,6 +219,7 @@ const App = () => {
               onChange={handleChange}
               value={values.website}
               placeholder="Ваш вебсайт"
+              disabled={isFormDisabled}
             />
             {errors.website && touched.website ? (
               <div className="error">{errors.website}</div>
@@ -199,6 +237,7 @@ const App = () => {
               defaultValue={0}
               value={values.age}
               placeholder="Возраст"
+              disabled={isFormDisabled}
             />
             {errors.age && touched.age ? (
               <div className="error">{errors.age}</div>
@@ -214,10 +253,12 @@ const App = () => {
               placeholder="Ваш навык"
               onChange={handleChange}
               value={values.currentSkill}
+              disabled={isFormDisabled}
             />
             <Button
               type="danger"
               className="add-skill"
+              disabled={isFormDisabled}
               onClick={(event) => (
                 handleOnAddSkill(event, setFieldValue, values.currentSkill, values.skills))}
             >
@@ -231,6 +272,7 @@ const App = () => {
               name="acceptTerms"
               onChange={handleChange}
               checked={values.acceptTerms}
+              disabled={isFormDisabled}
             >
               Согласен с политикой
             </Checkbox>
@@ -239,7 +281,13 @@ const App = () => {
             ) : null}
           </div>
           <div className="form-item ">
-            <Button type="primary" onClick={handleSubmit}>Отправить</Button>
+            <Button
+              type="primary"
+              onClick={handleSubmit}
+              disabled={isFormDisabled}
+            >
+              Отправить
+            </Button>
           </div>
         </Form>
       )}
